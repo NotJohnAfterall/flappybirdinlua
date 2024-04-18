@@ -1,42 +1,22 @@
-local sqlite = require('sqlite3');
-local Pipes = {}
-local Bird = {}
+local sqlite3 = require('sqlite3');
+DbScore = 0
+DisScore = 0
 
-local LAST_SPAWNED = 0
-local SPAWN_INTERVAL = 0--// Will be set depending on screen size
-local SPAWN_DISTANCE = 2
 
-local PIPE_WIDTH = 70
-local PIPE_HEIGHT = 10000
-local PIPE_MAX_OFFSET = 200
-local PIPE_GAP = 350
-
-local SPEED = 0.1
-local wasPressed = false
-local rotation = 0
-
-local BeatScreen = false
-local LoseScreen = false
-local ScreenData = {}
-local stopped = false
-local startScreen = true
+Dificulty = 3 --// lower harder
+DificultyName = "Medium"
+StartScreen = true
 
 local mainFont = love.graphics.newFont("RobotoMono.ttf", 40)
-local Score = 0
-local disScore = 0
-local dbscore = 0
 local ScoreFont = love.graphics.newFont("RobotoMono.ttf", 20)
 local FPSfont = love.graphics.newFont("RobotoMono.ttf", 15)
 local TitleFont = love.graphics.newFont("RobotoMono.ttf", 60)
 
-
 function Init() --// Must set it depending on the screen with, bigger screen = less time between spawns
     Bird = {x = 15, y = ScreenData.height / 2, Grav = 0}
 
-
     --create/open database / create table
     local hDB = sqlite3.open("database.db");
-
     if hDB then 
     local tableExists = false
     for row in hDB:nrows("PRAGMA table_info(main);") do
@@ -51,9 +31,9 @@ function Init() --// Must set it depending on the screen with, bigger screen = l
     end    
 
     for row in hDB:nrows("SELECT score FROM main WHERE id=1;") do
-        dbscore = row.score
+        DbScore = row.score
     end
-    print(dbscore)
+    print(DbScore)
 
     hDB:close();   
  end
@@ -64,7 +44,7 @@ function ResetVars()
     Pipes = {}
 
     LAST_SPAWNED = 0
-    SPAWN_INTERVAL = 0 --// Will be set depending on screen size
+    SPAWN_INTERVAL = 0 
     SPAWN_DISTANCE = 5
 
     PIPE_WIDTH = 70
@@ -73,32 +53,32 @@ function ResetVars()
     PIPE_GAP = 350
 
     SPEED = 0.1
-    birdsize = 100
-    wasPressed = false
-    rotation = 0
+    Birdsize = 100
+    WasPressed = false
+    Rotation = 0
 
     BeatScreen = false
     LoseScreen = false
+    ScreenData = {}
+    Stopped = false
+
 
     StoppedTimeout = 50
     WasSpeedChange = false
-    Dificulty = 3 --// lower harder
-    DificultyName = "Medium"
+    
+
+    Score = 0
 
 
     ScreenData.width, ScreenData.height = love.graphics.getDimensions()
 
-    if dbscore < disScore then
+    if DbScore < DisScore then
         local hDB = sqlite3.open("database.db");
-        hDB:execute("UPDATE main SET score = " .. disScore .. " WHERE id = 1;")
+        hDB:execute("UPDATE main SET score = " .. DisScore .. " WHERE id = 1;")
         hDB:close();   
     end
-    
 
-    
-
-    Score = 0
-    disScore = 0
+    DisScore = 0
 end
 
 function CheckCollision(x1,y1,w1,h1, x2,y2,w2,h2)
@@ -110,18 +90,18 @@ function CheckCollision(x1,y1,w1,h1, x2,y2,w2,h2)
 
 function love.load()
     love.window.setFullscreen(true)
-    -- love.window.setMode(1000, 720)
-    love.window.setTitle("Flappy Bird")
-    ResetVars()
-    ScreenData.width, ScreenData.height = love.graphics.getDimensions()
+    love.window.setTitle("Flappy Bird:Beat Yourself")
 
+    ResetVars()
+
+    ScreenData.width, ScreenData.height = love.graphics.getDimensions()
     love.graphics.setBackgroundColor(1, 1, 1)
-    birdImg = love.graphics.newImage("bird.png")
-    birdImgHi = birdsize / birdImg:getHeight()
-    birdImgWi = birdsize / birdImg:getWidth()
+
+    BirdImg = love.graphics.newImage("bird.png")
+    BirdImgHi = Birdsize / BirdImg:getHeight()
+    BirdImgWi = Birdsize / BirdImg:getWidth()
     
     Init()
-      
 end
 
 function love.draw()
@@ -130,53 +110,54 @@ function love.draw()
         love.graphics.rectangle("fill", pipe.x, pipe.y, PIPE_WIDTH, PIPE_HEIGHT)
     end
 
-
     love.graphics.push()
     love.graphics.translate(20, Bird.y)
-    love.graphics.rotate(-rotation)
-    love.graphics.draw(birdImg, 15, -25, 0, birdsize / birdImg:getWidth(), birdsize / birdImg:getHeight())
+    love.graphics.rotate(-Rotation)
+    love.graphics.draw(BirdImg, 15, -25, 0, Birdsize / BirdImg:getWidth(), Birdsize / BirdImg:getHeight())
     love.graphics.pop()
-    local scoreText = tostring(disScore)
+
     love.graphics.setFont(mainFont)
+    local scoreText = tostring(DisScore)
     love.graphics.print(scoreText, ScreenData.width - ScoreFont:getWidth(scoreText) - 30, 0)
+
     love.graphics.printf(DificultyName, 0, 0, ScreenData.width, "center")
-    love.graphics.print("LHS: " .. dbscore, 20, ScoreFont:getHeight(scoreText) - 20)
+    love.graphics.print("LHS: " .. DbScore, 20, ScoreFont:getHeight(scoreText) - 20)
+
     love.graphics.setFont(FPSfont)
     love.graphics.printf("FPS: " .. love.timer.getFPS(), 5, ScreenData.height - 20, ScreenData.width , "left")
+
     love.graphics.setFont(mainFont)
 
     if LoseScreen then
-        
         local textL = "You lost\nPress space to restart"
-        local text_size_x = mainFont:getWidth(textL)
-        local text_size_y = mainFont:getHeight(textL)
 
         love.graphics.setColor(1, 0, 0, 0.5)
         love.graphics.rectangle("fill", 0, 0, ScreenData.width, ScreenData.height)
+        
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.printf(textL, 0, ScreenData.height / 2 , ScreenData.width, "center")
         -- love.graphics.print("Press space to restart", ScreenData.width / 2 - text_size_x / 2, ScreenData.height / 2 - text_size_y / 2 + 50)
     elseif BeatScreen then
         local textB = "You beat the highscore!\nPress space to restart"
-        local text_size_x = mainFont:getWidth(textB)
         local text_size_y = mainFont:getHeight(textB)
 
         love.graphics.setColor(0, 1, 0, 0.5)
         love.graphics.rectangle("fill", 0, 0, ScreenData.width, ScreenData.height)
+
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.printf(textB, 0, ScreenData.height / 2 - text_size_y / 2, ScreenData.width, "center")
-        -- love.graphics.print("Press space to restart", ScreenData.width / 2 - text_size_x / 2, ScreenData.height / 2 - text_size_y / 2 + 50)
-    elseif startScreen then
+    elseif StartScreen then
         local textT = "Flappy Bird:Beat Yourself"
-        local textS = "To win you need to beat your Last Highscore (LHS)\nPress: 1(Easy) 2(Medium) 3(Hard) to start (SPACE for quick Medium)\nPress 0 to RESET LHS\nControls:\nSPACE to jump up \nSHIFT to quickly drop\nGood Luck!"
-        local text_size_x = mainFont:getWidth(textS)
+        local textS = "To win you need to beat your Last Highscore (LHS)\nPress: 1(Easy) 2(Medium) 3(Hard) to start (SPACE for quick Medium)\nPress 0 to RESET\nPress ESC to stop game\nPress DELETE in menu to exit\nLHS\nControls:\nSPACE to jump up \nSHIFT to quickly drop\nGood Luck!"
         local text_size_y = mainFont:getHeight(textS)
 
         love.graphics.setColor(0, 0, 1, 0.5)
         love.graphics.rectangle("fill", 0, 0, ScreenData.width, ScreenData.height)
+
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.setFont(TitleFont)
         love.graphics.printf(textT, 0, ScreenData.height / 2 - text_size_y / 2 - 300, ScreenData.width, "center")
+
         love.graphics.setFont(mainFont)
         love.graphics.printf(textS, 0, ScreenData.height / 2 - text_size_y / 2 - 150, ScreenData.width, "center")
     end
@@ -185,12 +166,13 @@ end
 function love.update(dt)
     SPAWN_INTERVAL = (1920 / ScreenData.width) * SPAWN_DISTANCE
     
-    if startScreen then
+    if StartScreen then
         if love.keyboard.isDown("space") then
             ResetVars()
-            stopped = false
+            Stopped = false
             Init()
-            startScreen = false
+            StartScreen = false
+
             Dificulty = 3
             DificultyName = "Medium"
         elseif love.keyboard.isDown("0") then
@@ -199,24 +181,27 @@ function love.update(dt)
             hDB:close();   
         elseif love.keyboard.isDown("1") then
             ResetVars()
-            stopped = false
+            Stopped = false
             Init()
-            startScreen = false
+            StartScreen = false
+
             Dificulty = 4
             DificultyName = "Easy"
 
         elseif love.keyboard.isDown("2") then
             ResetVars()
-            stopped = false
+            Stopped = false
             Init()
-            startScreen = false
+            StartScreen = false
+
             Dificulty = 3
             DificultyName = "Medium"
         elseif love.keyboard.isDown("3") then
             ResetVars()
-            stopped = false
+            Stopped = false
             Init()
-            startScreen = false
+            StartScreen = false
+
             Dificulty = 2
             DificultyName = "Hard"
         elseif love.keyboard.isDown("delete") then
@@ -228,16 +213,16 @@ function love.update(dt)
     if LoseScreen then
         if love.keyboard.isDown("escape") then
             LoseScreen = false
-            startScreen = true
-            stopped = true
+            StartScreen = true
+            Stopped = true
         elseif love.keyboard.isDown("delete") then
         love.event.quit()
         end
     end
 
-    if stopped then
+    if Stopped then
         if love.keyboard.isDown("space") and StoppedTimeout == 0 then
-            stopped = false
+            Stopped = false
             ResetVars()
             Init()
         elseif StoppedTimeout ~= 0 then
@@ -247,25 +232,22 @@ function love.update(dt)
     end
 
     if love.keyboard.isDown("escape") then
-        startScreen = true
-        stopped = true
+        StartScreen = true
+        Stopped = true
     end
 
-    if love.keyboard.isDown("space") and wasPressed == false then
-        -- print("Space was pressed")
+    if love.keyboard.isDown("space") and WasPressed == false then
         Bird.Grav = 10
-        wasPressed = true
+        WasPressed = true
     elseif love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift") then
         Bird.Grav = Bird.Grav - 1
     else
-        -- print ("Space was not pressed")
         Bird.Grav = Bird.Grav - 0.4
-        wasPressed = false
+        WasPressed = false
     end
 
     Bird.y = Bird.y - Bird.Grav
-
-    rotation = math.rad(Bird.Grav * 3)
+    Rotation = math.rad(Bird.Grav * 3)
 
     --// Move all the pipes to the left 
     local coll = false
@@ -277,21 +259,20 @@ function love.update(dt)
             Score = Score + 1
             pipe.Scored = true
             if Score % 2 == 0 then
-                disScore = Score * 0.5
+                DisScore = Score * 0.5
                 WasSpeedChange = false
             end
         end
 
-        if disScore % Dificulty == 0 and WasSpeedChange == false then
+        if DisScore % Dificulty == 0 and WasSpeedChange == false then
             if SPEED < 2 then
                 SPEED = SPEED + 0.05
             end
-            if SPAWN_DISTANCE > 0.5 then
+            if SPAWN_DISTANCE > 1 then
                 SPAWN_DISTANCE = SPAWN_DISTANCE - 0.5
             end
             WasSpeedChange = true
             print(SPEED, SPAWN_DISTANCE)
-    
         end
 
         if pipe.x < -PIPE_WIDTH * 2 then
@@ -299,19 +280,17 @@ function love.update(dt)
         end      
         if CheckCollision(Bird.x, Bird.y, 120, 60, pipe.x, pipe.y, PIPE_WIDTH, PIPE_HEIGHT) or Bird.y > ScreenData.height or Bird.y < 0 then 
             coll = true
-            print (birdImgWi, birdImgHi, pipe.x, pipe.y, PIPE_WIDTH, PIPE_HEIGHT, Bird.x, Bird.y)
-            print (birdImg:getHeight(), birdImg:getWidth(), birdImgHi, birdImgWi)
-
+            print (BirdImgWi, BirdImgHi, pipe.x, pipe.y, PIPE_WIDTH, PIPE_HEIGHT, Bird.x, Bird.y)
+            print (BirdImg:getHeight(), BirdImg:getWidth(), BirdImgHi, BirdImgWi)
         end
-
     end
 
-    if coll and disScore > dbscore then
+    if coll and DisScore > DbScore then
         BeatScreen = true
-        stopped = true
+        Stopped = true
     elseif coll then
         LoseScreen = true
-        stopped = true
+        Stopped = true
     end
 
     --// Spawn a new pipe every SPAWN_INTERVAL seconds
@@ -325,17 +304,6 @@ function love.update(dt)
 
         table.insert(Pipes, {x = ScreenData.width + PIPE_WIDTH / 2, y = point - PIPE_HEIGHT - PIPE_GAP / 2, Scored = false})
         table.insert(Pipes, {x = ScreenData.width + PIPE_WIDTH / 2, y = point + PIPE_GAP / 2, Scored = false})
-
-        -- if rnd == 1 then
-        --     table.insert(Pipes, {x = ScreenData.width + PIPE_WIDTH / 2, y = point - PIPE_HEIGHT - PIPE_GAP / 2, Scored = false})
-        --     print(1, point - PIPE_HEIGHT - PIPE_GAP / 2)
-        -- elseif rnd == 2 then
-        --     table.insert(Pipes, {x = ScreenData.width + PIPE_WIDTH / 2, y = point + PIPE_GAP / 2, Scored = false})
-        --     print(1, point + PIPE_GAP / 2)
-        -- else
-        --     table.insert(Pipes, {x = ScreenData.width + PIPE_WIDTH / 2, y = point - PIPE_HEIGHT - PIPE_GAP / 2, Scored = false})
-        --     table.insert(Pipes, {x = ScreenData.width + PIPE_WIDTH / 2, y = point + PIPE_GAP / 2, Scored = false})
-        -- end
     end
 end
 
@@ -344,7 +312,6 @@ function love.run()
 
 	-- We don't want the first frame's dt to include time taken by love.load.
 	if love.timer then love.timer.step() end
-
 	local dt = 0
 
 	-- Main loop time.
