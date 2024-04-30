@@ -90,7 +90,7 @@ function CheckCollision(x1,y1,w1,h1, x2,y2,w2,h2)
 
 function love.load()
     love.window.setFullscreen(true)
-    love.window.setTitle("Flappy Bird:Beat Yourself")
+    love.window.setTitle("Flappy Bird:Play against yourself")
 
     ResetVars()
 
@@ -129,7 +129,7 @@ function love.draw()
     love.graphics.setFont(mainFont)
 
     if LoseScreen then
-        local textL = "You lost\nPress space to restart"
+        local textL = "You lost!\nPress space to restart"
 
         love.graphics.setColor(1, 0, 0, 0.5)
         love.graphics.rectangle("fill", 0, 0, ScreenData.width, ScreenData.height)
@@ -138,7 +138,7 @@ function love.draw()
         love.graphics.printf(textL, 0, ScreenData.height / 2 , ScreenData.width, "center")
         -- love.graphics.print("Press space to restart", ScreenData.width / 2 - text_size_x / 2, ScreenData.height / 2 - text_size_y / 2 + 50)
     elseif BeatScreen then
-        local textB = "You beat the highscore!\nPress space to restart"
+        local textB = "You won!\nPress space to restart"
         local text_size_y = mainFont:getHeight(textB)
 
         love.graphics.setColor(0, 1, 0, 0.5)
@@ -147,7 +147,7 @@ function love.draw()
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.printf(textB, 0, ScreenData.height / 2 - text_size_y / 2, ScreenData.width, "center")
     elseif StartScreen then
-        local textT = "Flappy Bird:Beat Yourself"
+        local textT = "Flappy Bird:Play against yourself"
         local textS = "To win you need to beat your Last Highscore (LHS)\nPress: 1(Easy) 2(Medium) 3(Hard) to start (SPACE for quick Medium)\nPress 0 to RESET\nPress ESC to stop game\nPress DELETE in menu to exit\nLHS\nControls:\nSPACE to jump up \nSHIFT to quickly drop\nGood Luck!"
         local text_size_y = mainFont:getHeight(textS)
 
