@@ -1,4 +1,5 @@
-local sqlite3 = require('sqlite3');
+local json = require("json")
+
 DbScore = 0
 DisScore = 0
 
@@ -12,31 +13,31 @@ local ScoreFont = love.graphics.newFont("RobotoMono.ttf", 20)
 local FPSfont = love.graphics.newFont("RobotoMono.ttf", 15)
 local TitleFont = love.graphics.newFont("RobotoMono.ttf", 60)
 
+-- seru ti na to budes mit clean kod konecne lol
+local database = {}
+database.default_data = {score = 0}
+
+function database.open(x)
+    if not love.filesystem.getInfo("flappy.json") then
+        love.filesystem.write("flappy.json", json.encode(database.default_data))
+    end
+
+    local file = love.filesystem.newFile("flappy.json")
+    file:open(x)
+
+    return file
+end
+
 function Init() --// Must set it depending on the screen with, bigger screen = less time between spawns
     Bird = {x = 15, y = ScreenData.height / 2, Grav = 0}
 
-    --create/open database / create table
-    local hDB = sqlite3.open("database.db");
-    if hDB then 
-    local tableExists = false
-    for row in hDB:nrows("PRAGMA table_info(main);") do
-        if row.name == "score" then
-            tableExists = true
-            break
-        end
-    end
+    local file = database.open("r")
+    local data = json.decode(file:read())
+    file:close()
 
-    if not tableExists then
-        hDB:execute("CREATE TABLE main (id INTEGER PRIMARY KEY, score INTEGER);")
-    end    
+    DbScore = data.score
 
-    for row in hDB:nrows("SELECT score FROM main WHERE id=1;") do
-        DbScore = row.score
-    end
     print(DbScore)
-
-    hDB:close();   
- end
 end
 
 function ResetVars()
@@ -73,9 +74,9 @@ function ResetVars()
     ScreenData.width, ScreenData.height = love.graphics.getDimensions()
 
     if DbScore < DisScore then
-        local hDB = sqlite3.open("database.db");
-        hDB:execute("UPDATE main SET score = " .. DisScore .. " WHERE id = 1;")
-        hDB:close();   
+        local file = database.open("w")
+        file:write(json.encode({score = DisScore}))
+        file:close()
     end
 
     DisScore = 0
@@ -136,7 +137,6 @@ function love.draw()
         
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.printf(textL, 0, ScreenData.height / 2 , ScreenData.width, "center")
-        -- love.graphics.print("Press space to restart", ScreenData.width / 2 - text_size_x / 2, ScreenData.height / 2 - text_size_y / 2 + 50)
     elseif BeatScreen then
         local textB = "You won!\nPress space to restart"
         local text_size_y = mainFont:getHeight(textB)
@@ -176,9 +176,8 @@ function love.update(dt)
             Dificulty = 3
             DificultyName = "Medium"
         elseif love.keyboard.isDown("0") then
-            local hDB = sqlite3.open("database.db");
-            hDB:execute("UPDATE main SET score = " .. 0 .. " WHERE id = 1;")
-            hDB:close();   
+            local file = database.open("w")
+            file:write(json.encode(database.default_data))
         elseif love.keyboard.isDown("1") then
             ResetVars()
             Stopped = false
